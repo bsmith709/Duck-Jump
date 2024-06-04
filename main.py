@@ -13,6 +13,7 @@ platforms = []
 running = True
 done = False
 jumping = False
+spawnable = True
 restart_background_rect = None
 
 # Constants
@@ -49,14 +50,20 @@ class Platform:
         self.rect = s.get_rect(topleft = pos)
         self.touched = touch
         self.speed = PLATFORM_SPEED + (score * 0.1)
+        self.reached_mid = False
 
 def make_platforms():
-    while len(platforms) < 2:
+    global spawnable
+    if spawnable:
         platforms.append(Platform())
+        spawnable = False
     for platform in platforms:
         platform.rect.x -= platform.speed
         if platform.rect.right < 0:
             platforms.remove(platform)
+        elif platform.rect.left < 400 and not platform.reached_mid:
+            spawnable = True
+            platform.reached_mid = True
 
 def gravity():
     global player_y_velocity, jumping
@@ -68,6 +75,7 @@ def gravity():
             jumping = False
             dababy_rect.bottom = platform.rect.top
             player_y_velocity = 0
+            dababy_rect.x -= platform.speed
 
 def draw_window():
     global done, restart_background_rect
@@ -138,14 +146,16 @@ def event_loop():
     gravity()
 
 def restart():
-    global score, player_y_velocity, platforms, done, jumping, dababy_rect
+    global score, player_y_velocity, platforms, done, jumping, spawnable, dababy_rect
     score = 0
     player_y_velocity = 0
     platforms = []
     done = False
     jumping = False
-    platforms.append(Platform(starting_platform, (0, 400), True))
-    dababy_rect = dababy_surf.get_rect(midbottom=(100, 400))
+    spawnable = True
+    platforms.append(Platform(starting_platform, (300, 400), True))
+    platforms[0].reached_mid = True
+    dababy_rect = dababy_surf.get_rect(midbottom=(400, 400))
 
 def main():
     restart()
