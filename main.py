@@ -17,7 +17,7 @@ player_lost = False
 jumping = False
 platform_spawnable = True
 coin_spawnable = True
-restart_background_rect = None
+restart_rect = None
 highscore = 0
 
 # Constants
@@ -42,11 +42,13 @@ dababy_surf = pygame.transform.scale(pygame.image.load('Assets/dababy.png').conv
 dababy_rect = dababy_surf.get_rect(midbottom = (100, 400))
 gun_surf = pygame.transform.scale(pygame.image.load('Assets/gun.png').convert_alpha(), (100, 50))
 
-font = pygame.font.Font(None, 36)
+font = pygame.font.Font('Assets/Dafont.ttf', 36)
 
-starting_platform = pygame.transform.scale(pygame.image.load('Assets/gun.png').convert_alpha(), (500, 100))
+starting_platform = pygame.transform.scale(pygame.image.load('Assets/gun.png').convert_alpha(), (500, 250))
 
 coin_frames = [pygame.transform.scale(pygame.image.load(f'Assets/Coin/coin{i}.png'), (50, 50)) for i in range(1, 6)]
+end_screen = pygame.transform.scale(pygame.image.load('Assets/end_screen.png'), (500, 250))
+end_screen_rect = end_screen.get_rect(center = (WIDTH / 2, HEIGHT / 2))
 #coin_frames += [pygame.transform.scale(pygame.image.load(f'Assets/Coin/coin{i}.png'), (50, 50)) for i in range(3, 1, -1)]
 
 class AnimatedCoin(pygame.sprite.Sprite):
@@ -125,7 +127,7 @@ def gravity():
             dababy_rect.x -= platform.speed
 
 def draw_window():
-    global player_lost, restart_background_rect, highscore
+    global player_lost, restart_rect, highscore
     screen.blit(background, (0, 0))
     if not player_lost:
         for platform in platforms:
@@ -144,24 +146,17 @@ def draw_window():
         screen.blit(player_coins_surf, player_coins_rect)
 
     else:
-        score_background = pygame.Surface((400,200))
-        score_background.fill('White')
-        score_background_rect = score_background.get_rect(center = (WIDTH/2,HEIGHT/2))
-        score_surf = font.render("Score: " + str(score), True, 'Black')
-        score_rect = score_surf.get_rect(center = (WIDTH/2,HEIGHT/2 - 75))
-        screen.blit(score_background, score_background_rect)
+        score_surf = font.render(f"Score: {score}", True, 'White')
+        score_rect = score_surf.get_rect(center = (WIDTH/2, HEIGHT/2 - 75))
+        screen.blit(end_screen, end_screen_rect)
         screen.blit(score_surf, score_rect)
 
         restart_surf = font.render("Play again?", True, 'White')
-        restart_rect = restart_surf.get_rect(center = (WIDTH/2, HEIGHT/2 + 50))
-        restart_background = pygame.Surface((200, 50))
-        restart_background.fill('Black')
-        restart_background_rect = restart_background.get_rect(center=(WIDTH / 2, HEIGHT / 2 + 50))
-        screen.blit(restart_background, restart_background_rect)
+        restart_rect = restart_surf.get_rect(center = (WIDTH/2, HEIGHT/2 + 60))
         screen.blit(restart_surf, restart_rect)
 
-        highscore_surf = font.render(f"Highscore: {highscore}", True, 'Black')
-        highscore_rect = score_surf.get_rect(center = (WIDTH/2,HEIGHT/2 - 25))
+        highscore_surf = font.render(f"Highscore: {highscore}", True, 'White')
+        highscore_rect = score_surf.get_rect(center = (WIDTH/2 - 35, HEIGHT/2 - 25))
         screen.blit(highscore_surf, highscore_rect)
 
     pygame.display.update()
@@ -192,14 +187,14 @@ def checkLost():
         updatePlayerCoins()
 
 def event_loop():
-    global running, restart_background_rect
+    global running, restart_rect
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
             exit()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             click_pos = event.pos
-            if player_lost and restart_background_rect.collidepoint(click_pos):
+            if player_lost and restart_rect.collidepoint(click_pos):
                 restart()
     handleCoins()
     handlePlatforms()
