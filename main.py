@@ -1,10 +1,17 @@
 import random
 import sys
+from enum import Enum
 
 import pygame
 from sys import exit
 
 pygame.init()
+
+class GameState(Enum):
+    TITLE = 1
+    PLAYING = 2
+    LOST = 3
+    SHOP = 4
 
 # Global variables
 score = 0
@@ -13,12 +20,12 @@ player_y_velocity = 0
 platforms = []
 coins = []
 running = True
-player_lost = False
 jumping = False
 platform_spawnable = True
 coin_spawnable = True
 restart_rect = None
 highscore = 0
+GAMESTATE = GameState.PLAYING
 
 # Constants
 PLAYER_SPEED = 10
@@ -127,9 +134,9 @@ def gravity():
             dababy_rect.x -= platform.speed
 
 def draw_window():
-    global player_lost, restart_rect, highscore
+    global restart_rect, highscore, GAMESTATE
     screen.blit(background, (0, 0))
-    if not player_lost:
+    if GAMESTATE == GameState.PLAYING:
         for platform in platforms:
             screen.blit(platform.surf, platform.rect)
         for coin in coins:
@@ -180,9 +187,9 @@ def checkScore(platform):
         score += 1
 
 def checkLost():
-    global player_lost
+    global GAMESTATE
     if dababy_rect.top > HEIGHT:
-        player_lost = True
+        GAMESTATE = GameState.LOST
         updateHighscore()
         updatePlayerCoins()
 
@@ -194,7 +201,7 @@ def event_loop():
             exit()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             click_pos = event.pos
-            if player_lost and restart_rect.collidepoint(click_pos):
+            if GAMESTATE == GameState.LOST and restart_rect.collidepoint(click_pos):
                 restart()
     handleCoins()
     handlePlatforms()
@@ -224,13 +231,13 @@ def updatePlayerCoins():
         file.write(f"{player_coins}")
 
 def restart():
-    global score, player_coins, player_y_velocity, platforms, coins, player_lost, jumping, platform_spawnable, coin_spawnable, dababy_rect
+    global score, player_coins, player_y_velocity, platforms, coins, GAMESTATE, jumping, platform_spawnable, coin_spawnable, dababy_rect
     score = 0
     getPlayerCoins()
     player_y_velocity = 0
     platforms = []
     coins = []
-    player_lost = False
+    GAMESTATE = GameState.PLAYING
     jumping = False
     platform_spawnable = True
     coin_spawnable = True
