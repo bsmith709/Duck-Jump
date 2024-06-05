@@ -15,6 +15,7 @@ done = False
 jumping = False
 spawnable = True
 restart_background_rect = None
+highscore = 0
 
 # Constants
 PLAYER_SPEED = 10
@@ -24,6 +25,7 @@ PLATFORM_SPEED = 10
 WIDTH = 1000
 HEIGHT = 600
 FPS = 60
+SPEED_MULTIPLIER = 0.2
 
 # Screen and clock setup
 screen = pygame.display.set_mode((WIDTH,HEIGHT))
@@ -49,7 +51,7 @@ class Platform:
         self.surf = s
         self.rect = s.get_rect(topleft = pos)
         self.touched = touch
-        self.speed = PLATFORM_SPEED + (score * 0.1)
+        self.speed = PLATFORM_SPEED + (score * SPEED_MULTIPLIER)
         self.reached_mid = False
 
 def make_platforms():
@@ -71,14 +73,14 @@ def gravity():
     dababy_rect.y += player_y_velocity
     for platform in platforms:
         checkScore(platform)
-        if dababy_rect.colliderect(platform.rect) and player_y_velocity > 0:
+        if dababy_rect.colliderect(platform.rect) and player_y_velocity > 0 and dababy_rect.y < platform.rect.y:
             jumping = False
             dababy_rect.bottom = platform.rect.top
             player_y_velocity = 0
             dababy_rect.x -= platform.speed
 
 def draw_window():
-    global done, restart_background_rect
+    global done, restart_background_rect, highscore
     screen.blit(background, (0, 0))
     if not done:
         for platform in platforms:
@@ -93,7 +95,7 @@ def draw_window():
         score_background.fill('White')
         score_background_rect = score_background.get_rect(center = (WIDTH/2,HEIGHT/2))
         score_surf = font.render("Score: " + str(score), True, 'Black')
-        score_rect = score_surf.get_rect(center = (WIDTH/2,HEIGHT/2 - 25))
+        score_rect = score_surf.get_rect(center = (WIDTH/2,HEIGHT/2 - 75))
         screen.blit(score_background, score_background_rect)
         screen.blit(score_surf, score_rect)
 
@@ -104,6 +106,15 @@ def draw_window():
         restart_background_rect = restart_background.get_rect(center=(WIDTH / 2, HEIGHT / 2 + 50))
         screen.blit(restart_background, restart_background_rect)
         screen.blit(restart_surf, restart_rect)
+        
+        if score > int(highscore):
+            highscore = str(score)
+            with open('highscore.txt', 'w') as file:
+                file.write(str(score))
+
+        highscore_surf = font.render("Highscore: " + highscore, True, 'Black')
+        highscore_rect = score_surf.get_rect(center = (WIDTH/2,HEIGHT/2 - 25))
+        screen.blit(highscore_surf, highscore_rect)
 
     pygame.display.update()
 
@@ -145,6 +156,11 @@ def event_loop():
     movement()
     gravity()
 
+def getHighscore():
+    global highscore
+    with open('highscore.txt', 'r') as file:
+        highscore = file.read()
+
 def restart():
     global score, player_y_velocity, platforms, done, jumping, spawnable, dababy_rect
     score = 0
@@ -153,6 +169,7 @@ def restart():
     done = False
     jumping = False
     spawnable = True
+    getHighscore()
     platforms.append(Platform(starting_platform, (300, 400), True))
     platforms[0].reached_mid = True
     dababy_rect = dababy_surf.get_rect(midbottom=(400, 400))
