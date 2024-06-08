@@ -17,15 +17,15 @@ class GameState(Enum):
 score = 0
 player_coins = 0
 player_y_velocity = 0
+current_hat = 0
 platforms = []
 coins = []
 running = True
 jumping = False
 platform_spawnable = True
 coin_spawnable = True
-restart_rect = None
 highscore = 0
-GAMESTATE = GameState.PLAYING
+GAMESTATE = GameState.TITLE
 
 # Constants
 PLAYER_SPEED = 10
@@ -44,19 +44,72 @@ pygame.display.set_caption("Dagame")
 background = pygame.image.load('Assets/1729603_fritorio_dababy.jpg').convert()
 clock = pygame.time.Clock()
 
-# Dababy and gun surfaces
+# Surfaces
 dababy_surf = pygame.transform.scale(pygame.image.load('Assets/dababy.png').convert_alpha(), (80, 50))
 dababy_rect = dababy_surf.get_rect(midbottom = (100, 400))
 gun_surf = pygame.transform.scale(pygame.image.load('Assets/gun.png').convert_alpha(), (100, 50))
 
 font = pygame.font.Font('Assets/Dafont.ttf', 36)
+title_font = pygame.font.Font('Assets/Dafont.ttf', 100)
+restart_surf = font.render("Play again?", True, 'White')
+restart_rect = restart_surf.get_rect(center = (WIDTH/2, HEIGHT/2 + 60))
 
 starting_platform = pygame.transform.scale(pygame.image.load('Assets/gun.png').convert_alpha(), (500, 250))
 
 coin_frames = [pygame.transform.scale(pygame.image.load(f'Assets/Coin/coin{i}.png'), (50, 50)) for i in range(1, 6)]
+tiny_coin_frames = [pygame.transform.scale(pygame.image.load(f'Assets/Coin/coin{i}.png'), (25, 25)) for i in range(1, 6)]
 end_screen = pygame.transform.scale(pygame.image.load('Assets/end_screen.png'), (500, 250))
 end_screen_rect = end_screen.get_rect(center = (WIDTH / 2, HEIGHT / 2))
 #coin_frames += [pygame.transform.scale(pygame.image.load(f'Assets/Coin/coin{i}.png'), (50, 50)) for i in range(3, 1, -1)]
+
+play_button = pygame.transform.scale(pygame.image.load('Assets/play_button.png'), (192, 72))
+play_button_rect = play_button.get_rect(center = (WIDTH/2 - 150, HEIGHT/2 + 100))
+shop_button = pygame.transform.scale(pygame.image.load('Assets/shop_button.png'), (192, 72))
+shop_button_rect = shop_button.get_rect(center = (WIDTH/2 + 150, HEIGHT/2 + 100))
+title_surf = title_font.render("Dagame", True, 'White')
+title_rect = title_surf.get_rect(center = (WIDTH/2, HEIGHT/2 - 100))
+title_background_surf = pygame.surface.Surface((WIDTH,HEIGHT))
+title_background_surf.fill('Blue')
+title_background_rect = title_background_surf.get_rect(topleft = (0,0))
+shop_box = pygame.transform.scale(pygame.image.load('Assets/shop_box.png'), (192 * 3, 64 * 3))
+shop_box_rect = shop_box.get_rect(center = (WIDTH/2, HEIGHT/2 - 100))
+shop_arrow = pygame.surface.Surface((54,108))
+shop_left_arrow_rect = shop_arrow.get_rect(topleft = (shop_box_rect.x + 42, shop_box_rect.y + 42))
+shop_right_arrow_rect = shop_arrow.get_rect(topleft = (shop_box_rect.right - 96, shop_box_rect.y + 42))
+
+wizard_hat = pygame.transform.scale(pygame.image.load('Assets/wizard hat.png'), (100, 100))
+wizard_hat_rect = wizard_hat.get_rect(center = (WIDTH/2, HEIGHT/2 - 100))
+brick_hat = pygame.transform.scale(pygame.image.load('Assets/brick.png'), (100, 100))
+brick_hat_rect = brick_hat.get_rect(center = (WIDTH/2, HEIGHT/2 - 100))
+
+class Hat():
+    def __init__(self, surf, rect, price):
+        self.surface = surf
+        self.rect = rect
+        self.price = price
+
+hats = []
+hats.append(Hat(wizard_hat, wizard_hat_rect, 1000))
+hats.append(Hat(brick_hat, brick_hat_rect, 800))
+
+class TinyAnimatedCoin(pygame.sprite.Sprite):
+    frames = tiny_coin_frames
+    animation_speed = COIN_ANIMATION_SPEED
+    def __init__(self, pos):
+        super().__init__()
+        self.current_frame = 0
+        self.frame = TinyAnimatedCoin.frames[self.current_frame]
+        self.rect = self.frame.get_rect(topleft = pos)
+        self.counter = 0
+
+    def update(self):
+        self.counter += TinyAnimatedCoin.animation_speed
+        if self.counter >= 1:
+            self.counter = 0
+            self.current_frame = (self.current_frame + 1) % len(TinyAnimatedCoin.frames)
+            self.frame = TinyAnimatedCoin.frames[self.current_frame]
+
+shop_coin = TinyAnimatedCoin((shop_box_rect.center[0] - 70, shop_box_rect.bottom + 15))
 
 class AnimatedCoin(pygame.sprite.Sprite):
     frames = coin_frames
@@ -134,8 +187,9 @@ def gravity():
             dababy_rect.x -= platform.speed
 
 def draw_window():
-    global restart_rect, highscore, GAMESTATE
+    global restart_rect, highscore, GAMESTATE, shop_coin
     screen.blit(background, (0, 0))
+    
     if GAMESTATE == GameState.PLAYING:
         for platform in platforms:
             screen.blit(platform.surf, platform.rect)
@@ -151,20 +205,33 @@ def draw_window():
         player_coins_surf = font.render(f"Coins: {player_coins}", True,'White')
         player_coins_rect = player_coins_surf.get_rect(topleft = (10, 40))
         screen.blit(player_coins_surf, player_coins_rect)
+    
+    elif GAMESTATE == GameState.TITLE:
+        screen.fill((86, 215, 255))
+        screen.blit(title_surf, title_rect)
+        screen.blit(play_button, play_button_rect)
+        screen.blit(shop_button, shop_button_rect)
 
-    else:
+    elif GAMESTATE == GameState.LOST:
         score_surf = font.render(f"Score: {score}", True, 'White')
         score_rect = score_surf.get_rect(center = (WIDTH/2, HEIGHT/2 - 75))
         screen.blit(end_screen, end_screen_rect)
         screen.blit(score_surf, score_rect)
-
-        restart_surf = font.render("Play again?", True, 'White')
-        restart_rect = restart_surf.get_rect(center = (WIDTH/2, HEIGHT/2 + 60))
         screen.blit(restart_surf, restart_rect)
 
         highscore_surf = font.render(f"Highscore: {highscore}", True, 'White')
         highscore_rect = score_surf.get_rect(center = (WIDTH/2 - 35, HEIGHT/2 - 25))
         screen.blit(highscore_surf, highscore_rect)
+    
+    elif GAMESTATE == GameState.SHOP:
+        screen.fill((86, 215, 255))
+        screen.blit(shop_box, shop_box_rect)
+        screen.blit(hats[current_hat].surface, hats[current_hat].rect)
+        price_surf = font.render(f"{hats[current_hat].price}", True, 'White')
+        price_rect = price_surf.get_rect(center = (shop_box_rect.center[0], shop_box_rect.bottom + 26))
+        screen.blit(shop_coin.frame, shop_coin.rect)
+        screen.blit(price_surf, price_rect)
+        shop_coin.update()
 
     pygame.display.update()
 
@@ -194,20 +261,34 @@ def checkLost():
         updatePlayerCoins()
 
 def event_loop():
-    global running, restart_rect
+    global running, restart_rect, GAMESTATE, current_hat
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
             exit()
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            click_pos = event.pos
-            if GAMESTATE == GameState.LOST and restart_rect.collidepoint(click_pos):
+
+        if GAMESTATE == GameState.LOST:
+            if event.type == pygame.MOUSEBUTTONDOWN and restart_rect.collidepoint(event.pos):
                 restart()
-    handleCoins()
-    handlePlatforms()
-    checkLost()
-    movement()
-    gravity()
+                GAMESTATE = GameState.PLAYING
+
+        elif GAMESTATE == GameState.TITLE:
+            if event.type == pygame.MOUSEBUTTONDOWN and play_button_rect.collidepoint(event.pos):
+                GAMESTATE = GameState.PLAYING
+            elif event.type == pygame.MOUSEBUTTONDOWN and shop_button_rect.collidepoint(event.pos):
+                GAMESTATE = GameState.SHOP
+        elif GAMESTATE == GameState.SHOP:
+            if event.type == pygame.MOUSEBUTTONDOWN and shop_left_arrow_rect.collidepoint(event.pos) and current_hat > 0:
+                current_hat -= 1
+            elif event.type == pygame.MOUSEBUTTONDOWN and shop_right_arrow_rect.collidepoint(event.pos) and current_hat < len(hats) - 1:
+                current_hat += 1
+
+    if GAMESTATE == GameState.PLAYING:
+        handleCoins()
+        handlePlatforms()
+        checkLost()
+        movement()
+        gravity()
 
 def getHighscore():
     global highscore
@@ -231,13 +312,14 @@ def updatePlayerCoins():
         file.write(f"{player_coins}")
 
 def restart():
-    global score, player_coins, player_y_velocity, platforms, coins, GAMESTATE, jumping, platform_spawnable, coin_spawnable, dababy_rect
+    global score, player_coins, current_hat, player_y_velocity, platforms, coins, GAMESTATE, jumping, platform_spawnable, coin_spawnable, dababy_rect
     score = 0
     getPlayerCoins()
     player_y_velocity = 0
+    current_hat = 0
     platforms = []
     coins = []
-    GAMESTATE = GameState.PLAYING
+    GAMESTATE = GameState.TITLE
     jumping = False
     platform_spawnable = True
     coin_spawnable = True
