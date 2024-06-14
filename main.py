@@ -117,17 +117,23 @@ brick_hat_rect = brick_hat.get_rect(center = (WIDTH/2, HEIGHT/2 - 100))
 
 # Player class used for the main player character
 class Player(pygame.sprite.Sprite):
+
     def __init__(self, surf = player_surf, rect = player_rect, hat = None):
         self.surf = surf
         self.rect = rect
-        self.jump_limit = 1
-        self.jumps_used = 0
         self.y_velocity = 0
         self.gravity = GRAVITY
         self.hat = hat
+        
+        # Jump Variables
+        self.jump_limit = 1
+        self.jumps_used = 0
         self.jump_cooldown = 10
         self.jump_cooldown_counter = 0
         self.jump_on_cooldown = False
+
+        # Wizard hat float ability
+        self.float_ability = False
 
     def jump(self):
         if not self.jump_on_cooldown and self.jumps_used < self.jump_limit:
@@ -135,17 +141,20 @@ class Player(pygame.sprite.Sprite):
             self.y_velocity = JUMP_VELOCITY
             self.jump_on_cooldown = True
 
+    # Currently just updates jump cooldown but will update animation in the future
     def update(self):
         if self.jump_on_cooldown:
             self.jump_cooldown_counter += 1
             if self.jump_cooldown_counter >= self.jump_cooldown:
                 self.jump_on_cooldown = False
 
+    # Reset the player jump variables
     def resetJumps(self):
         player.jumps_used = 0
         player.jump_on_cooldown = False
         player.jump_cooldown_counter = 0
     
+    # Reset the player to its default state
     def reset(self):
         self.rect = player_surf.get_rect(midbottom = (300, 400))
         self.jumps_used = 0
@@ -153,11 +162,12 @@ class Player(pygame.sprite.Sprite):
         self.jump_cooldown_counter = 0
         self.jump_on_cooldown = False
     
+    # Equip hat by adding its stats and changing player surface to the player wearing the hat
     def equipHat(self, hat):
         self.hat = hat
         hat.addStats(self)
         self.surf = hat.player_with_hat
-
+    # Remove hat by removing its stats and changing player surface back to default
     def removeHat(self):
         self.hat.removeStats(self)
         self.hat = None
@@ -184,10 +194,10 @@ class Hat():
 
 class WizardHat(Hat):
     def addStats(self, player):
-        pass
+        player.float_ability = True
     
     def removeStats(self, player):
-        pass
+        player.float_ability = False
         
 
 class BrickHat(Hat):
@@ -388,6 +398,8 @@ def movement():
         player.rect.x -= PLAYER_SPEED
     if keys[pygame.K_SPACE]:
         player.jump()
+        if player.float_ability and player.y_velocity > 3:
+            player.y_velocity = 3
 
 def checkScore(platform):
     global score
@@ -430,7 +442,7 @@ def event_loop():
             elif event.type == pygame.MOUSEBUTTONDOWN and back_arrow_rect.collidepoint(event.pos):
                 GAMESTATE = GameState.TITLE
             elif event.type == pygame.MOUSEBUTTONDOWN and buy_button_rect.collidepoint(event.pos):
-                if hats[current_hat].price < player_coins:
+                if hats[current_hat].price < player_coins and not hats[current_hat].owned:
                     player_coins -= hats[current_hat].price
                     updatePlayerCoins()
                     hats[current_hat].owned = True
