@@ -57,13 +57,13 @@ if dababy_mode:
     title_rect = title_surf.get_rect(center = (WIDTH/2, HEIGHT/2 - 100))
 
 else:
-    pygame.display.set_caption("Duck Game")
+    pygame.display.set_caption("Duck Jump")
     background = pygame.transform.scale(pygame.image.load('Assets/first_background.png'), (1000, 600))
     player_surf = pygame.transform.scale(pygame.image.load('Assets/the_man.png').convert_alpha(), (50, 50))
     player_rect = player_surf.get_rect(midbottom = (300, 400))
     platform_surf =  pygame.transform.scale(pygame.image.load('Assets/grass_platform.png'), (100, 25))
     starting_platform =pygame.transform.scale(pygame.image.load('Assets/grass_platform.png'), (500, 50))
-    title_surf = title_font.render("Duck Game", True, 'White')
+    title_surf = title_font.render("Duck Jump", True, 'White')
     title_rect = title_surf.get_rect(center = (WIDTH/2, HEIGHT/2 - 100))
 
 # Text for the play again button after losing
@@ -117,7 +117,7 @@ brick_hat_rect = brick_hat.get_rect(center = (WIDTH/2, HEIGHT/2 - 100))
 
 # Player class used for the main player character
 class Player(pygame.sprite.Sprite):
-
+    
     def __init__(self, surf = player_surf, rect = player_rect, hat = None):
         self.surf = surf
         self.rect = rect
@@ -134,6 +134,12 @@ class Player(pygame.sprite.Sprite):
 
         # Wizard hat float ability
         self.float_ability = False
+
+    def moveLeft(self):
+        self.rect.x -= PLAYER_SPEED
+
+    def moveRight(self):
+        self.rect.x += PLAYER_SPEED
 
     def jump(self):
         if not self.jump_on_cooldown and self.jumps_used < self.jump_limit:
@@ -197,8 +203,7 @@ class WizardHat(Hat):
         player.float_ability = True
     
     def removeStats(self, player):
-        player.float_ability = False
-        
+        player.float_ability = False     
 
 class BrickHat(Hat):
     def addStats(self, player):
@@ -276,6 +281,7 @@ def handlePlatforms():
     if platform_spawnable:
         platforms.append(Platform())
         platform_spawnable = False
+
     for platform in platforms:
         platform.rect.x -= platform.speed
         if platform.rect.right < 0:
@@ -307,7 +313,8 @@ def gravity():
     player.y_velocity += player.gravity
     player.rect.y += player.y_velocity
     for platform in platforms:
-        checkScore(platform)
+        if not platform.touched: 
+            checkScore(platform)
         if player.rect.colliderect(platform.rect) and player.y_velocity > 0 and player.rect.y < platform.rect.y:
             player.rect.bottom = platform.rect.top
             player.y_velocity = 0
@@ -393,9 +400,9 @@ def draw_window():
 def movement():
     keys = pygame.key.get_pressed()
     if keys[pygame.K_d]:
-        player.rect.x += PLAYER_SPEED
+        player.moveRight()
     if keys[pygame.K_a]:
-        player.rect.x -= PLAYER_SPEED
+        player.moveLeft()
     if keys[pygame.K_SPACE]:
         player.jump()
         if player.float_ability and player.y_velocity > 3:
@@ -403,7 +410,7 @@ def movement():
 
 def checkScore(platform):
     global score
-    if player.rect.colliderect(platform.rect) and not platform.touched:
+    if player.rect.colliderect(platform.rect):
         platform.touched = True
         score += 1
 
