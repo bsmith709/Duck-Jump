@@ -5,8 +5,6 @@ from enum import Enum
 import pygame
 from sys import exit
 
-dababy_mode = False
-
 pygame.init()
 
 class GameState(Enum):
@@ -42,29 +40,17 @@ screen = pygame.display.set_mode((WIDTH,HEIGHT))
 clock = pygame.time.Clock()
 
 # Font Setup
-font = pygame.font.Font('Assets/Dafont.ttf', 36)
-title_font = pygame.font.Font('Assets/Dafont.ttf', 100)
+font = pygame.font.Font('Assets/pixel_font.ttf', 36)
+title_font = pygame.font.Font('Assets/pixel_font.ttf', 100)
 
-# Changes some surfaces depending on whether dababy mode is active
-if dababy_mode:
-    pygame.display.set_caption("Dagame")
-    background = pygame.image.load('Assets/1729603_fritorio_dababy.jpg').convert()
-    player_surf = pygame.transform.scale(pygame.image.load('Assets/dababy.png').convert_alpha(), (80, 50))
-    player_rect = player_surf.get_rect(midbottom = (300, 400))
-    platform_surf = pygame.transform.scale(pygame.image.load('Assets/gun.png').convert_alpha(), (100, 50))
-    starting_platform = pygame.transform.scale(pygame.image.load('Assets/gun.png').convert_alpha(), (500, 250))
-    title_surf = title_font.render("Dagame", True, 'White')
-    title_rect = title_surf.get_rect(center = (WIDTH/2, HEIGHT/2 - 100))
-
-else:
-    pygame.display.set_caption("Duck Jump")
-    background = pygame.transform.scale(pygame.image.load('Assets/first_background.png'), (1000, 600))
-    player_surf = pygame.transform.scale(pygame.image.load('Assets/the_man.png').convert_alpha(), (50, 50))
-    player_rect = player_surf.get_rect(midbottom = (300, 400))
-    platform_surf =  pygame.transform.scale(pygame.image.load('Assets/grass_platform.png'), (100, 25))
-    starting_platform =pygame.transform.scale(pygame.image.load('Assets/grass_platform.png'), (500, 50))
-    title_surf = title_font.render("Duck Jump", True, 'White')
-    title_rect = title_surf.get_rect(center = (WIDTH/2, HEIGHT/2 - 100))
+pygame.display.set_caption("Duck Jump")
+background = pygame.transform.scale(pygame.image.load('Assets/first_background.png'), (1000, 600))
+player_surf = pygame.transform.scale(pygame.image.load('Assets/the_man.png').convert_alpha(), (50, 50))
+player_rect = player_surf.get_rect(midbottom = (300, 400))
+platform_surf =  pygame.transform.scale(pygame.image.load('Assets/grass_platform.png'), (100, 25))
+starting_platform =pygame.transform.scale(pygame.image.load('Assets/grass_platform.png'), (500, 50))
+title_surf = title_font.render("Duck Jump", True, 'White')
+title_rect = title_surf.get_rect(center = (WIDTH/2, HEIGHT/2 - 100))
 
 # Text for the play again button after losing
 restart_surf = font.render("Play again?", True, 'White')
@@ -170,9 +156,12 @@ class Player(pygame.sprite.Sprite):
     
     # Equip hat by adding its stats and changing player surface to the player wearing the hat
     def equipHat(self, hat):
+        if self.hat != None:
+            self.removeHat()
         self.hat = hat
         hat.addStats(self)
         self.surf = hat.player_with_hat
+
     # Remove hat by removing its stats and changing player surface back to default
     def removeHat(self):
         self.hat.removeStats(self)
@@ -213,8 +202,6 @@ class BrickHat(Hat):
     def removeStats(self, player):
         player.gravity = GRAVITY
         player.jump_limit = 1
-
-        
 
 # Initialize list of hats and add each hat
 hats = []
@@ -273,32 +260,49 @@ class Platform:
         self.touched = touch
         self.speed = PLATFORM_SPEED + (score * SPEED_MULTIPLIER)
         self.reached_mid = False
+    
+    def update(self):
+        self.rect.x -= self.speed
+    
+    def checkScore(self, player):
+        global score
+        if abs(player.rect.bottom - self.rect.top) <= 1:
+            self.touched = True
+            score += 1
 
 # Checks whether platforms can be spawned based on whether the last platform has passed a certain point and spawns a platform if so
 # Also moves each of the currently spawned platforms
 def handlePlatforms():
     global platform_spawnable
+    to_remove = []
     if platform_spawnable:
         platforms.append(Platform())
         platform_spawnable = False
 
     for platform in platforms:
-        platform.rect.x -= platform.speed
+        platform.update()
         if platform.rect.right < 0:
-            platforms.remove(platform)
+            to_remove.append(platform)
         elif platform.rect.left < 550 and not platform.reached_mid:
-            platform_spawnable = True
+            platforms.append(Platform())
             platform.reached_mid = True
+        if not platform.touched: 
+            platform.checkScore(player)
+
+    for platform in to_remove:
+        platforms.remove(platform)
 
 def handleCoins():
     global coin_spawnable, player_coins
+
+    to_remove = []
     if coin_spawnable:
         coins.append(AnimatedCoin())
         coin_spawnable = False
     for coin in coins:
         coin.rect.x -= coin.speed
         if coin.rect.right < 0:
-            coins.remove(coin)
+            to_remove.append(coin)
         elif coin.rect.left < 400 and not coin.reached_mid:
             coin_spawnable = True
             coin.reached_mid = True
@@ -309,12 +313,12 @@ def handleCoins():
             player_coins += 1
             coins.remove(coin)
 
+    for coin in to_remove:
+        coins.remove(coin)
 def gravity():
     player.y_velocity += player.gravity
     player.rect.y += player.y_velocity
     for platform in platforms:
-        if not platform.touched: 
-            checkScore(platform)
         if player.rect.colliderect(platform.rect) and player.y_velocity > 0 and player.rect.y < platform.rect.y:
             player.rect.bottom = platform.rect.top
             player.y_velocity = 0
@@ -382,6 +386,7 @@ def draw_window():
             equipped_surf = font.render("EQUIPPED", True, 'White')
             equipped_rect = equipped_surf.get_rect(center = (shop_box_rect.center[0], shop_box_rect.bottom + 26))
             screen.blit(equipped_surf, equipped_rect)
+
         else:
             owned_surf = font.render("OWNED", True, 'White')
             owned_rect = owned_surf.get_rect(center = (shop_box_rect.center[0], shop_box_rect.bottom + 26))
@@ -408,11 +413,6 @@ def movement():
         if player.float_ability and player.y_velocity > 3:
             player.y_velocity = 3
 
-def checkScore(platform):
-    global score
-    if player.rect.colliderect(platform.rect):
-        platform.touched = True
-        score += 1
 
 def checkLost():
     global GAMESTATE
@@ -428,6 +428,7 @@ def event_loop():
             running = False
             exit()
 
+        # If the player lost the game, check if they press the restart or back arrow button
         if GAMESTATE == GameState.LOST:
             if event.type == pygame.MOUSEBUTTONDOWN and restart_rect.collidepoint(event.pos):
                 restart()
@@ -436,28 +437,38 @@ def event_loop():
                 restart()
                 GAMESTATE = GameState.TITLE
 
+        # If player is on title screen, check if they press the play or shop button
         elif GAMESTATE == GameState.TITLE:
             if event.type == pygame.MOUSEBUTTONDOWN and play_button_rect.collidepoint(event.pos):
                 GAMESTATE = GameState.PLAYING
             elif event.type == pygame.MOUSEBUTTONDOWN and shop_button_rect.collidepoint(event.pos):
                 GAMESTATE = GameState.SHOP
+
+        # If player is in shop screen, check for input
         elif GAMESTATE == GameState.SHOP:
+            # Player selects last hat
             if event.type == pygame.MOUSEBUTTONDOWN and shop_left_arrow_rect.collidepoint(event.pos) and current_hat > 0:
                 current_hat -= 1
+            
+            # Player selects next hat
             elif event.type == pygame.MOUSEBUTTONDOWN and shop_right_arrow_rect.collidepoint(event.pos) and current_hat < len(hats) - 1:
                 current_hat += 1
+            
+            # If player presses back arrow, return to title screen
             elif event.type == pygame.MOUSEBUTTONDOWN and back_arrow_rect.collidepoint(event.pos):
                 GAMESTATE = GameState.TITLE
+
+            # If player presses buy button, check if they have enough coins and do not own the hat, if so purchase it.
             elif event.type == pygame.MOUSEBUTTONDOWN and buy_button_rect.collidepoint(event.pos):
                 if hats[current_hat].price < player_coins and not hats[current_hat].owned:
                     player_coins -= hats[current_hat].price
                     updatePlayerCoins()
                     hats[current_hat].owned = True
                     updateOwnedHats()
+
+            # If player presses equip button, check if player is qeatin
             elif event.type == pygame.MOUSEBUTTONDOWN and equip_button_rect.collidepoint(event.pos):
                 if not hats[current_hat] == player.hat and hats[current_hat].owned:
-                    if not player.hat == None:
-                        player.removeHat()
                     player.equipHat(hats[current_hat])
 
     if GAMESTATE == GameState.PLAYING:
@@ -521,9 +532,9 @@ def restart():
 def main():
     restart()
     while True:
-        draw_window()
         event_loop()
-        clock.tick(60)
+        draw_window()
+        clock.tick(FPS)
 
 if __name__ == '__main__':
     main()
