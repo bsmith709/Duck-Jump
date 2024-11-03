@@ -285,26 +285,20 @@ class Platform:
 # Also moves each of the currently spawned platforms
 def handlePlatforms():
     global platform_spawnable
-    to_remove = []
     if platform_spawnable:
         platforms.append(Platform())
         platform_spawnable = False
 
-    for platform in platforms:
+    for platform in list(filter(lambda platform: platform.rect.right >= 0, platforms)):
         platform.update()
-        if platform.rect.right < 0:
-            to_remove.append(platform)
-        elif platform.rect.left < 550 and not platform.reached_mid:
+        if platform.rect.left < 550 and not platform.reached_mid:
             platforms.append(Platform())
             platform.reached_mid = True
         if not platform.touched: 
             platform.checkScore(player)
 
-    for platform in to_remove:
-        platforms.remove(platform)
-
 def handleCoins():
-    global coin_spawnable, player_coins
+    global coin_spawnable, player_coins, coins
 
     to_remove = []
     if coin_spawnable:
@@ -324,8 +318,8 @@ def handleCoins():
             player_coins += 1
             to_remove.append(coin)
 
-    for coin in to_remove:
-        coins.remove(coin)
+    coins = list(filter(lambda coin: coin not in to_remove, coins))
+
 def gravity():
     player.y_velocity += player.gravity
     player.rect.y += player.y_velocity
