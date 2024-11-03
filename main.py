@@ -16,13 +16,14 @@ class GameState(Enum):
 # Constants
 PLAYER_SPEED = 10
 JUMP_VELOCITY = -25
-GRAVITY = 1.5
+GRAVITY = 1.2
 PLATFORM_SPEED = 5
 WIDTH = 1000
 HEIGHT = 600
 FPS = 60
 SPEED_MULTIPLIER = 0.5
 COIN_ANIMATION_SPEED = 0.1
+PLAYER_ANIMATION_SPEED = 0.1
 
 # Global variables
 score = 0
@@ -45,8 +46,6 @@ title_font = pygame.font.Font('Assets/pixel_font.ttf', 100)
 
 pygame.display.set_caption("Duck Jump")
 background = pygame.transform.scale(pygame.image.load('Assets/first_background.png'), (1000, 600))
-player_surf = pygame.transform.scale(pygame.image.load('Assets/the_man.png').convert_alpha(), (50, 50))
-player_rect = player_surf.get_rect(midbottom = (300, 400))
 platform_surf =  pygame.transform.scale(pygame.image.load('Assets/grass_platform.png'), (100, 25))
 starting_platform =pygame.transform.scale(pygame.image.load('Assets/grass_platform.png'), (500, 50))
 title_surf = title_font.render("Duck Jump", True, 'White')
@@ -57,6 +56,7 @@ restart_surf = font.render("Play again?", True, 'White')
 restart_rect = restart_surf.get_rect(center = (WIDTH/2, HEIGHT/2 + 60))
 
 # Frames for coin and small coin animations
+player_frames = [pygame.transform.scale(pygame.image.load(f'Assets/Duck/duck{i}.png'), (50, 50)) for i in range(1,6)]
 coin_frames = [pygame.transform.scale(pygame.image.load(f'Assets/Coin/coin{i}.png'), (50, 50)) for i in range(1, 6)]
 tiny_coin_frames = [pygame.transform.scale(pygame.image.load(f'Assets/Coin/coin{i}.png'), (25, 25)) for i in range(1, 6)]
 
@@ -96,17 +96,20 @@ cant_equip_button = pygame.transform.scale(pygame.image.load('Assets/cant_equip_
 cant_equip_button_rect = cant_equip_button.get_rect(center = (WIDTH / 2 - 75, HEIGHT / 2 + 125))
 
 # Surfaces and rects for the hats to be displayed in the shop
-wizard_hat = pygame.transform.scale(pygame.image.load('Assets/wizard hat.png'), (100, 100))
+wizard_hat = pygame.transform.scale(pygame.image.load('Assets/wizard_hat.png'), (100, 100))
 wizard_hat_rect = wizard_hat.get_rect(center = (WIDTH/2, HEIGHT/2 - 100))
 brick_hat = pygame.transform.scale(pygame.image.load('Assets/brick.png'), (100, 100))
 brick_hat_rect = brick_hat.get_rect(center = (WIDTH/2, HEIGHT/2 - 100))
 
 # Player class used for the main player character
 class Player(pygame.sprite.Sprite):
-    
-    def __init__(self, surf = player_surf, rect = player_rect, hat = None):
-        self.surf = surf
-        self.rect = rect
+    frames = player_frames
+    animation_speed = PLAYER_ANIMATION_SPEED
+    def __init__(self, hat = None):
+        self.current_frame = 0
+        self.frame = Player.frames[self.current_frame]
+        self.rect = self.frame.get_rect(midbottom = (300,400))
+        self.counter = 0
         self.y_velocity = 0
         self.gravity = GRAVITY
         self.hat = hat
@@ -114,7 +117,7 @@ class Player(pygame.sprite.Sprite):
         # Jump Variables
         self.jump_limit = 1
         self.jumps_used = 0
-        self.jump_cooldown = 10
+        self.jump_cooldown = 15
         self.jump_cooldown_counter = 0
         self.jump_on_cooldown = False
 
@@ -135,6 +138,11 @@ class Player(pygame.sprite.Sprite):
 
     # Currently just updates jump cooldown but will update animation in the future
     def update(self):
+        self.counter += Player.animation_speed
+        if self.counter >= 1:
+            self.counter = 0
+            self.current_frame = (self.current_frame + 1) % len(Player.frames)
+            self.frame = Player.frames[self.current_frame]
         if self.jump_on_cooldown:
             self.jump_cooldown_counter += 1
             if self.jump_cooldown_counter >= self.jump_cooldown:
@@ -148,9 +156,12 @@ class Player(pygame.sprite.Sprite):
     
     # Reset the player to its default state
     def reset(self):
-        self.rect = player_surf.get_rect(midbottom = (300, 400))
-        self.jumps_used = 0
+        self.current_frame = 0
+        self.frame = Player.frames[self.current_frame]
+        self.rect = self.frame.get_rect(midbottom = (300,400))
+        self.counter = 0
         self.y_velocity = 0
+        self.jumps_used = 0
         self.jump_cooldown_counter = 0
         self.jump_on_cooldown = False
     
@@ -160,13 +171,13 @@ class Player(pygame.sprite.Sprite):
             self.removeHat()
         self.hat = hat
         hat.addStats(self)
-        self.surf = hat.player_with_hat
+        Player.frames = [hat.player_with_hat]
 
     # Remove hat by removing its stats and changing player surface back to default
     def removeHat(self):
         self.hat.removeStats(self)
         self.hat = None
-        self.surf = player_surf
+        Player.frames = player_frames
 
 # Initialize player
 player = Player()
@@ -196,7 +207,7 @@ class WizardHat(Hat):
 
 class BrickHat(Hat):
     def addStats(self, player):
-        player.gravity = 2
+        player.gravity = GRAVITY * 1.33
         player.jump_limit = 2
     
     def removeStats(self, player):
@@ -311,7 +322,7 @@ def handleCoins():
             if not coin.reached_mid:
                 coin_spawnable = True
             player_coins += 1
-            coins.remove(coin)
+            to_remove.append(coin)
 
     for coin in to_remove:
         coins.remove(coin)
@@ -335,7 +346,7 @@ def draw_window():
         for coin in coins:
             screen.blit(coin.frame, coin.rect)
             coin.update()
-        screen.blit(player.surf, player.rect)
+        screen.blit(player.frame, player.rect)
 
         score_surf = font.render(f"Score: {score}", True, 'Black')
         score_rect = score_surf.get_rect(topleft = (10,10))
