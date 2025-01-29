@@ -172,12 +172,16 @@ class Player(pygame.sprite.Sprite):
         self.hat = hat
         hat.addStats(self)
         Player.frames = [hat.player_with_hat]
+        self.current_frame = 0
+        self.frame = Player.frames[self.current_frame]
 
     # Remove hat by removing its stats and changing player surface back to default
     def removeHat(self):
         self.hat.removeStats(self)
         self.hat = None
         Player.frames = player_frames
+        self.current_frame = 0
+        self.frame = Player.frames[self.current_frame]
 
 # Initialize player
 player = Player()
@@ -471,9 +475,11 @@ def event_loop():
                     hats[current_hat].owned = True
                     updateOwnedHats()
 
-            # If player presses equip button, check if player is qeatin
+            # If player presses equip button, check if player is wearing the hat, if so remove it, if not equip it
             elif event.type == pygame.MOUSEBUTTONDOWN and equip_button_rect.collidepoint(event.pos):
-                if not hats[current_hat] == player.hat and hats[current_hat].owned:
+                if hats[current_hat] == player.hat:
+                    player.removeHat()
+                elif hats[current_hat].owned:
                     player.equipHat(hats[current_hat])
 
     if GAMESTATE == GameState.PLAYING:
